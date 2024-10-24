@@ -17,14 +17,9 @@ from smpclient.requests.os_management import ResetWrite
 from typing_extensions import Annotated
 
 from smpmgr import file_management, image_management, os_management, terminal
-from smpmgr.common import (
-    Options,
-    TransportDefinition,
-    connect_with_spinner,
-    get_smpclient,
-    smp_request,
-)
-from smpmgr.image_management import upload_with_progress_bar
+from smpmgr.common import (Options, TransportDefinition, connect_with_spinner,
+                           get_smpclient, smp_request)
+from smpmgr.image_management import download_with_progress_bar
 from smpmgr.logging import LogLevel, setup_logging
 from smpmgr.user import intercreate
 
@@ -47,13 +42,13 @@ app.command()(terminal.terminal)
 def options(
     ctx: typer.Context,
     port: str = typer.Option(
-        None, help="The serial port to connect to, e.g. COM1, /dev/ttyACM0, etc."
+        '18d1:9502', help="The serial port to connect to, e.g. COM1, /dev/ttyACM0, etc."
     ),
     timeout: float = typer.Option(
         2.0, help="Transport timeout in seconds; how long to wait for requests"
     ),
     mtu: int = typer.Option(
-        4096,
+        280,
         help=(
             "Maximum transmission unit supported by the SMP server serial transport."
             "  Ignored for BLE transport since the BLE connection will report MTU."
@@ -111,7 +106,7 @@ def upgrade(
         await connect_with_spinner(smpclient)
 
         with open(file, "rb") as f:
-            await upload_with_progress_bar(smpclient, f, slot)
+            await download_with_progress_bar(smpclient, f, slot)
 
         if slot != 0:
             # mark the new image for testing (swap)

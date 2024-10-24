@@ -8,22 +8,18 @@ from typing import cast
 
 import typer
 from rich import print
-from rich.progress import (
-    BarColumn,
-    DownloadColumn,
-    Progress,
-    TextColumn,
-    TimeRemainingColumn,
-    TransferSpeedColumn,
-)
+from rich.progress import (BarColumn, DownloadColumn, Progress, TextColumn,
+                           TimeRemainingColumn, TransferSpeedColumn)
 from smp.exceptions import SMPBadStartDelimiter
 from smpclient import SMPClient
 from smpclient.generics import error, success
 from smpclient.mcuboot import ImageInfo
 from smpclient.requests.image_management import ImageStatesRead
+from smpclient.requests.mgmt_ex import MgmtExStatesRead
 from typing_extensions import Annotated
 
-from smpmgr.common import Options, connect_with_spinner, get_smpclient, smp_request
+from smpmgr.common import (Options, connect_with_spinner, get_smpclient,
+                           smp_request)
 
 app = typer.Typer(name="image", help="The SMP Image Management Group.")
 logger = logging.getLogger(__name__)
@@ -39,7 +35,7 @@ def state_read(ctx: typer.Context) -> None:
     async def f() -> None:
         await connect_with_spinner(smpclient)
 
-        r = await smp_request(smpclient, options, ImageStatesRead(), "Waiting for image states...")  # type: ignore # noqa
+        r = await smp_request(smpclient, options, MgmtExStatesRead(), "Waiting for image states...")  # type: ignore # noqa
 
         if error(r):
             print(r)
@@ -56,10 +52,10 @@ def state_read(ctx: typer.Context) -> None:
     asyncio.run(f())
 
 
-async def upload_with_progress_bar(
+async def download_with_progress_bar(
     smpclient: SMPClient, file: typer.FileBinaryRead | BufferedReader, slot: int = 0
 ) -> None:
-    """Animate a progress bar while uploading the FW image."""
+    """Animate a progress bar while downloading the FW image."""
 
     with Progress(
         TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
@@ -74,11 +70,11 @@ async def upload_with_progress_bar(
     ) as progress:
         image = file.read()
         file.close()
-        task = progress.add_task("Uploading", total=len(image), filename=file.name, start=True)
+        task = progress.add_task("Downloading", total=len(image), filename=file.name, start=True)
         try:
             async for offset in smpclient.upload(image, slot):
                 progress.update(task, completed=offset)
-                logger.info(f"Upload {offset=}")
+                logger.info(f"Download {offset=}")
         except SMPBadStartDelimiter as e:
             progress.stop()
             logger.info(f"Bad start delimiter: {e}")
@@ -90,12 +86,12 @@ async def upload_with_progress_bar(
 
 
 @app.command()
-def upload(
+def download(
     ctx: typer.Context,
     file: Annotated[Path, typer.Argument(help="Path to FW image")],
-    slot: Annotated[int, typer.Option(help="The image slot to upload to")] = 0,
+    slot: Annotated[int, typer.Option(help="The image slot to download to")] = 0,
 ) -> None:
-    """Upload a FW image."""
+    """Download a FW image."""
 
     try:
         image_info = ImageInfo.load_file(str(file))
@@ -109,6 +105,6 @@ def upload(
     async def f() -> None:
         await connect_with_spinner(smpclient)
         with open(file, "rb") as f:
-            await upload_with_progress_bar(smpclient, f, slot)
+            await download_with_progress_bar(smpclient, f, slot)
 
     asyncio.run(f())

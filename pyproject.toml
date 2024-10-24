@@ -15,7 +15,7 @@ source = "git-tag"
 
 [tool.poetry.dependencies]
 python = ">=3.10, <3.14"
-smpclient = { path = "../smpclient/", develop = false }
+smpclient = { path = "../smpclient/", develop }
 typer = { extras = ["all"], version = "^0.9.0" }
 readchar = "^4.0.5"
 
